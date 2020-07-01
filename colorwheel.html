@@ -354,7 +354,7 @@
           Wheel.instances[j].recolor(...arg);
         }
       };
-      Wheel.rotate_colors = function(amount) {
+      Wheel.cycle_colors = function(amount) {
         var tmp = Array.from(Wheel.colors);
         for (var i=0; i<12; i++) {
           Wheel.colors[i] = tmp[(i+amount+24) % 12];
@@ -384,7 +384,7 @@
 
     var main = new WheelGroup();
     main.palette("gitlab");
-    main.rotate_colors(6);
+    main.cycle_colors(6);
 
     var nbsp = "\xa0";
 
