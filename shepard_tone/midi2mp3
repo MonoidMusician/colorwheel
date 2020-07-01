@@ -1,0 +1,2 @@
+#!/bin/bash
+fluidsynth -l -T raw -F - ~/Downloads/SalC5Light2.sf2 $1 | twolame -b 256 -r - $2

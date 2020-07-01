@@ -1,0 +1,2 @@
+#!/bin/bash
+ffmpeg -i $1 -c:a libmp3lame -q:a 2 $2

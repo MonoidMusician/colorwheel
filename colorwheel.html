@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <style>
+    svg {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+  <script type="text/javascript">
+    // Wouldn't it be nice if the DOM API was nicer?
+    var svgNS = "http://www.w3.org/2000/svg";
+    Element.prototype.setAttributes = function setAttributes(attrs) {
+      for (let k in attrs) {
+        this.setAttribute(k, attrs[k]);
+      }
+      return this;
+    };
+    Element.prototype.createChild = function createChild(localName, options) {
+      var element;
+      var isSVG = localName === "svg" || this instanceof SVGElement;
+      var opts, attrs;
+      if (typeof options === "string") {
+        opts = options;
+      } else if (typeof options === "object" && options.is) {
+        opts = {is: options.is};
+        delete options.is;
+        attrs = options;
+      } else {
+        attrs = options;
+      }
+      if (isSVG) {
+        element = document.createElementNS(svgNS, localName, opts);
+      } else {
+        element = document.createElement(localName, opts);
+      }
+      if (attrs) {
+        element.setAttributes(attrs);
+      }
+      this.appendChild(element);
+      return element;
+    };
+
+    // SVG path helpers
+    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+      var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+
+      return {
+        x: centerX + (radius * Math.cos(angleInRadians)),
+        y: centerY + (radius * Math.sin(angleInRadians))
+      };
+    }
+
+    function describeArc(x, y, radius, startAngle, endAngle){
+      var start = polarToCartesian(x, y, radius, endAngle);
+      var end = polarToCartesian(x, y, radius, startAngle);
+
+      var largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+      var d = [
+        "M", start.x, start.y,
+        "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+      ].join(" ");
+
+      return d;
+    }
+
+    function describeSegment(x, y, inner, outer, startAngle, endAngle) {
+      var starti = polarToCartesian(x, y, inner, endAngle);
+      var endi = polarToCartesian(x, y, inner, startAngle);
+      var starto = polarToCartesian(x, y, outer, startAngle);
+      var endo = polarToCartesian(x, y, outer, endAngle);
+
+      var largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+      var d = [
+        "M", starti.x, starti.y,
+        "A", inner, inner, 0, largeArcFlag, 0, endi.x, endi.y,
+        "L", starto.x, starto.y,
+        "A", outer, outer, 0, largeArcFlag, 1, endo.x, endo.y,
+        "L", starti.x, starti.y,
+      ].join(" ");
+
+      return d;
+    }
+
+    var mklength = function(len=12, val=undefined) {
+      var r = [];
+      for (var i=0; i<len; i++) {
+        r.push(val);
+      }
+      return r;
+    };
+
+    function rot(i, gen=5) {
+      return gen*(+i) % 12;
+    }
+
+    var palettes = {
+      "gitlab":
+        [
+          "#e24328", "#fc6c25", "#fca326", "#fdc743", "#ffe560", "#bae223",
+          "#22bc61", "#2d95bd", "#3871ab", "#3f4c9a", "#554488", "#9b2f48",
+        ]
+    };
+
+    var notes = ["c","cis","d","dis","e","f","fis","g","gis","a","ais","b"];
+    var audios = [];
+    var audio_sustain = false;
+    var audio_last_played = null;
+    var audio_playing = 0;
+    var audio_speed = 1000;
+    var audio_timer = null;
+    for (let note of notes) {
+      audios.push(new Audio("shepard_tone/shepard_tone_"+note+".mp3.mp3"));
+      fetch("shepard_tone/shepard_tone_"+note+".mp3.mp3", {})
+        .then(reponse => reponse.arrayBuffer())
+        .then((noteidx => buffer => {
+          var blob = new Blob([buffer], { type: 'audio/mp3' });
+          var url = window.URL.createObjectURL(blob);
+          const audio = new Audio();
+          audio.src = url;
+          audios[noteidx] = audio;
+        })(notes.findIndex(n => n === note)));
+    }
+    function playnote(i, sust=false) {
+      if (i !== null) {
+        audios[i % 12].currentTime = 0;
+        audios[i % 12].play();
+        audio_last_played = i % 12;
+      } else {
+        i = audio_last_played;
+      }
+      if (!sust) {
+        for (let j in audios) {
+          if (j != i) {
+            // A little overlap to not end too suddenly
+            setTimeout((k => () => audios[k].pause())(j), 100);
+          }
+        }
+      }
+    }
+    function playback() {
+      if (audio_playing === 0) {
+        if (audio_timer !== null) {
+          clearTimeout(audio_timer);
+        }
+        audio_timer = null;
+        return;
+      }
+      audio_last_played = (24 + audio_last_played + audio_playing) % 12;
+      playnote(audio_last_played, audio_sustain);
+      var audio_timer = setTimeout(playback, audio_speed);
+    }
+    var gens = [1,5,7,11];
+    var genstep = [1,1,1,5,5,5,7,7,7,11,11,11];
+    var genidx = [11,7,5,1,11,7,5,1,11,7,5,1];
+    var genadj = [0,1,2,4,5,6,6,7,8,10,11,0];
+
+    function WheelGroup() {
+      function Wheel() {
+        this.svg = document.body.createChild("svg");
+        this.segments = [];
+        this.gen_elements = [];
+        this.notes = [];
+        this.gen = new Proxy({
+          value: 1,
+          display: true,
+        }, {
+          set: (...args) => {
+            var ret = Reflect.set(...args);
+            if (args[1] === "value") {
+              this.recolor();
+            } else if (args[1] === "display") {
+              this.redraw();
+            }
+            return ret;
+          }
+        });
+        this.colors = new Proxy(Wheel.colors.slice(), {
+          set: (...args) => {
+            var ret = Reflect.set(...args);
+            if (Object.keys(args[0]).includes(args[1])) {
+              this.recolor(args[1]);
+            }
+            return ret;
+          }
+        });
+        for (var i=0; i<12; i++) {
+          var segment = this.svg.createChild("path", {
+            "cursor": "pointer",
+          });
+          this.segments.push(segment);
+          segment.addEventListener("click", (j => e => {
+            audio_playing = 0;
+            playnote((j+this.layout.note_shift) % 12, audio_sustain);
+          })(i));
+          var note = this.svg.createChild("text", {
+            "dominant-baseline": "middle",
+            "text-anchor": "middle",
+            "cursor": "pointer",
+          });
+          this.notes.push(note);
+          note.addEventListener("click", (j => e => {
+            audio_playing = 0;
+            playnote((j+this.layout.note_shift) % 12, audio_sustain);
+          })(i));
+          var gen = this.svg.createChild("path", {
+            "cursor": "pointer",
+          });
+          this.gen_elements.push(gen);
+          gen.addEventListener("click", (j => e => {
+            this.gen.value = genstep[j]*genstep[j]*genstep[j]*this.rot(genidx[j]) % 12;
+          })(i));
+        }
+        this.layout = new Proxy(Object.assign({}, Wheel.layout), {
+          set: (...args) => {
+            var ret = Reflect.set(...args);
+            this.redraw();
+            return ret;
+          }
+        });
+        this.redraw();
+        this.recolor();
+        Wheel.instances.push(this);
+        return this;
+      };
+      WheelGroup.prototype = Wheel;
+      Wheel.prototype.redraw = function() {
+        this.svg.setAttribute("width", this.layout.size);
+        this.svg.setAttribute("height", this.layout.size);
+        for (var i=0; i<12; i++) {
+          var d = describeSegment(
+            this.layout.size/2, this.layout.size/2,
+            this.layout.inner*this.layout.size,
+            this.layout.outer*this.layout.size,
+            -15+30*i+this.layout.rotate,
+            15+30*i+this.layout.rotate,
+          );
+          this.segments[i].setAttributes({ d });
+        }
+        for (var i=0; i<12; i++) {
+          var center = polarToCartesian(
+            this.layout.size/2, this.layout.size/2,
+            (this.layout.inner + this.layout.outer)*this.layout.size/2,
+            30*i+this.layout.rotate
+          );
+          this.notes[i].setAttributes(center);
+          this.notes[i].textContent = notes[(i+this.layout.note_shift) % 12].replace("is", "\u266F");
+          this.notes[i].setAttributes({
+            d,
+            "display": this.layout.notes ? "inherit" : "none"
+          });
+        }
+        for (var j=0; j<12; j++) {
+          var center = polarToCartesian(
+            this.layout.size/2, this.layout.size/2,
+            (this.layout.inner - this.layout.gen_dist)*this.layout.size,
+            30*genstep[j]+this.layout.rotate
+          );
+          var d = describeSegment(
+            center.x, center.y,
+            0,
+            this.layout.gen_size*this.layout.size,
+            -15+30*genadj[j]+this.layout.rotate,
+            15+30*genadj[j]+this.layout.rotate,
+          );
+          this.gen_elements[j].setAttributes({
+            d,
+            "display": this.gen.display ? "inherit" : "none"
+          });
+        }
+        return this;
+      };
+      Wheel.prototype.recolor = function(i=undefined) {
+        if (i !== undefined) {
+          this.segments[i].setAttribute("fill", this.colors[this.rot(i)]);
+          this.gen_elements[i].setAttribute("fill", this.colors[this.rot(genidx[i])]);
+        } else {
+          for (var j=0; j<12; j++) {
+            this.recolor(j);
+          }
+        }
+        return this;
+      };
+      Wheel.prototype.remove = function() {
+        document.body.removeChild(this.svg);
+        this.svg = null;
+        this.decouple();
+        return this;
+      };
+      Wheel.prototype.decouple = function() {
+        var i = Wheel.instances.findIndex(e => e === this);
+        if (i !== -1) {
+          Wheel.instances.splice(i, 1);
+        }
+        return this;
+      }
+      Wheel.prototype.rot = function(i) {
+        return rot(+i, this.gen.value);
+      };
+      Wheel.prototype.palette = function(name) {
+        for (var i=0; i<12; i++) {
+          this.colors[i] = palettes[name][this.rot(i)];
+        }
+        return this;
+      };
+      Wheel.colors = new Proxy(mklength(), {
+        set: (...args) => {
+          var ret = Reflect.set(...args);
+          if (Object.keys(args[0]).includes(args[1])) {
+            for (var j=0; j<Wheel.instances.length; j++) {
+              Wheel.instances[j].colors[args[1]] = args[2];
+            }
+          }
+          return ret;
+        }
+      });
+      Wheel.hsl = function(saturation=60, lightness=50) {
+        for (var i=0; i<12; i++) {
+          Wheel.colors[i] = ["hsl(", [30*i,saturation+"%",lightness+"%"].join(","), ")"].join("");
+        }
+      };
+      Wheel.palette = function(name) {
+        for (var i=0; i<12; i++) {
+          Wheel.colors[i] = palettes[name][i];
+        }
+      };
+      Wheel.recolor = function(...arg) {
+        for (var j=0; j<Wheel.instances.length; j++) {
+          Wheel.instances[j].recolor(...arg);
+        }
+      };
+      Wheel.rotate_colors = function(amount) {
+        var tmp = Array.from(Wheel.colors);
+        for (var i=0; i<12; i++) {
+          Wheel.colors[i] = tmp[(i+amount+24) % 12];
+        }
+      };
+      Wheel.layout = new Proxy({
+        size: 256,
+        inner: 140/512,
+        outer: 240/512,
+        rotate: 0,
+        gen_dist: 50/512,
+        gen_size: 30/512,
+        notes: true,
+        note_shift: 0,
+      }, {
+        set: (...args) => {
+          var ret = Reflect.set(...args);
+          for (var j=0; j<Wheel.instances.length; j++) {
+            Wheel.instances[j].layout[args[1]] = args[2];
+          }
+          return ret;
+        }
+      });
+      Wheel.instances = [];
+      return Wheel;
+    };
+
+    var main = new WheelGroup();
+    main.palette("gitlab");
+    main.rotate_colors(6);
+
+    var nbsp = "\xa0";
+
+    var ui = {};
+    ui.sustain = {};
+    ui.sustain.name = "Sustain ";
+    ui.sustain.div = document.body.createChild("div");
+    ui.sustain.input = ui.sustain.div.createChild("input", {
+      id: "sustain",
+      type: "checkbox",
+      value: audio_sustain,
+    });
+    ui.sustain.label = ui.sustain.div.createChild("label", {
+      for: "sustain",
+    });
+    ui.sustain.label.textContent = ui.sustain.name;
+    ui.sustain.input.addEventListener("input", () => {
+      audio_sustain = ui.sustain.input.checked;
+      if (!audio_sustain) {
+        playnote(null, false);
+      }
+    });
+    ui.sustain.button = ui.sustain.div.createChild("button");
+    ui.sustain.button.textContent = "Silence";
+    ui.sustain.button.addEventListener("click", () => {
+      audio_last_played = null; audio_playing = 0;
+      playnote(null, false);
+      playback();
+    });
+
+    ui.play_scale = {};
+    ui.play_scale.name = "Play scale";
+    ui.play_scale.last_value = 0;
+    ui.play_scale.div = document.body.createChild("div");
+    ui.play_scale.input = ui.play_scale.div.createChild("input", {
+      id: "play_scale",
+      class: "slider",
+      type: "range",
+      min: -6, max: 6,
+      value: 0,
+      step: 1,
+      style: "width: 150px;"
+    });
+    ui.play_scale.label = ui.play_scale.div.createChild("label", {
+      for: "play_scale",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.play_scale.label.textContent = ui.play_scale.name;
+    ui.play_scale.input.addEventListener("input", () => {
+      if (ui.play_scale.input.value === "0") {
+        ui.play_scale.label.textContent = "Stop";
+      } else {
+        ui.play_scale.label.textContent = ui.play_scale.input.value;
+      }
+    });
+    ui.play_scale.input.addEventListener("mouseup", () => {
+      ui.play_scale.label.textContent = ui.play_scale.name;
+    });
+    ui.play_scale.input.addEventListener("change", () => {
+      audio_playing = +ui.play_scale.input.value;
+      if (audio_last_played === null) audio_last_played = 0;
+      playback();
+      ui.play_scale.input.value = 0;
+    });
+
+    ui.audio_speed = {};
+    ui.audio_speed.name = "Scale speed";
+    ui.audio_speed.last_value = 0;
+    ui.audio_speed.div = document.body.createChild("div");
+    ui.audio_speed.input = ui.audio_speed.div.createChild("input", {
+      id: "audio_speed",
+      class: "slider",
+      type: "range",
+      min: 100, max: 8000,
+      value: audio_speed,
+      step: 10,
+      style: "width: 150px;"
+    });
+    ui.audio_speed.label = ui.audio_speed.div.createChild("label", {
+      for: "audio_speed",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.audio_speed.label.textContent = ui.audio_speed.name;
+    ui.audio_speed.input.addEventListener("input", () => {
+      ui.audio_speed.label.textContent = (""+(1000/+ui.audio_speed.input.value)).substring(0,5) + " Hz";
+      audio_speed = +ui.audio_speed.input.value;
+    });
+    ui.audio_speed.input.addEventListener("mouseup", () => {
+      ui.audio_speed.label.textContent = ui.audio_speed.name;
+    });
+
+    ui.note_shift = {};
+    ui.note_shift.name = "Rotate notes";
+    ui.note_shift.last_value = 0;
+    ui.note_shift.div = document.body.createChild("div");
+    ui.note_shift.input = ui.note_shift.div.createChild("input", {
+      id: "note_shift",
+      class: "slider",
+      type: "range",
+      min: -11, max: 11,
+      value: 0,
+      step: 1,
+      style: "width: 150px;"
+    });
+    ui.note_shift.label = ui.note_shift.div.createChild("label", {
+      for: "note_shift",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.note_shift.label.textContent = ui.note_shift.name;
+    ui.note_shift.input.addEventListener("input", () => {
+      ui.note_shift.label.textContent = ui.note_shift.input.value;
+      main.layout.note_shift = (24 - (ui.note_shift.last_value + +ui.note_shift.input.value)) % 12;
+    });
+    ui.note_shift.input.addEventListener("mouseup", () => {
+      ui.note_shift.label.textContent = ui.note_shift.name;
+    });
+    ui.note_shift.input.addEventListener("change", () => {
+      ui.note_shift.last_value = +ui.note_shift.input.value;
+      ui.note_shift.input.value = 0;
+    });
+    /*
+    ui.rotate = {};
+    ui.rotate.last_value = main.layout.rotate;
+    ui.rotate.div = document.body.createChild("div");
+    ui.rotate.input = ui.rotate.div.createChild("input", {
+      id: "rotate",
+      class: "slider",
+      type: "range",
+      min: -180, max: 180,
+      value: 0,
+      step: 15,
+      style: "width: 150px;"
+    });
+    ui.rotate.label = ui.rotate.div.createChild("label", {
+      for: "rotate",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.rotate.label.textContent = "\xa0";
+    ui.rotate.input.addEventListener("input", () => {
+      ui.rotate.label.textContent = ui.rotate.input.value;
+      main.layout.rotate = ui.rotate.last_value - +ui.rotate.input.value;
+    });
+    ui.rotate.input.addEventListener("mousemove", (e) => {
+      if (e.shiftKey) {
+        ui.rotate.input.step = 1;
+      } else {
+        ui.rotate.input.step = 15;
+      }
+    });
+    ui.rotate.input.addEventListener("mouseup", () => {
+      ui.rotate.label.textContent = "\xa0";
+    });
+    ui.rotate.input.addEventListener("change", () => {
+      ui.rotate.last_value = main.layout.rotate = main.layout.rotate - +ui.rotate.input.value;
+      ui.rotate.input.value = 0;
+    });
+    */
+    ui.rotate = {};
+    ui.rotate.name = "Cycle colors";
+    ui.rotate.last_value = 0;
+    ui.rotate.div = document.body.createChild("div");
+    ui.rotate.input = ui.rotate.div.createChild("input", {
+      id: "rotate",
+      class: "slider",
+      type: "range",
+      min: -11, max: 11,
+      value: 0,
+      step: 1,
+      style: "width: 150px;"
+    });
+    ui.rotate.label = ui.rotate.div.createChild("label", {
+      for: "rotate",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.rotate.label.textContent = ui.rotate.name;
+    ui.rotate.input.addEventListener("input", () => {
+      ui.rotate.label.textContent = ui.rotate.input.value;
+      main.rotate_colors(24 + ui.rotate.last_value + -ui.rotate.input.value);
+      ui.rotate.last_value = +ui.rotate.input.value;
+    });
+    ui.rotate.input.addEventListener("mouseup", () => {
+      ui.rotate.label.textContent = ui.rotate.name;
+    });
+    ui.rotate.input.addEventListener("change", () => {
+      ui.rotate.input.value = 0;
+    });
+
+    var wheel0 = new main();
+    var wheel1 = new main();
+    wheel0.gen.value = 7;
+    wheel1.layout.notes = false;
+
+    var options = {};
+    function audioblob() {
+      fetch("shepard_tone/shepard_tone.mp3.mp3", options) // set content header to array buffer
+        .then((reponse => reponse.arrayBuffer()))
+        .then((buffer) => {
+          var blob = new Blob([buffer], { type: 'audio/mp3' });
+          var url = window.URL.createObjectURL(blob);
+          const audio = new Audio();
+          audio.src = url;
+          audio.play();
+        });
+    }
+  </script>
+</body>
