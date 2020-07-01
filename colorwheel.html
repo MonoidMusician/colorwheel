@@ -115,6 +115,9 @@
       return r;
     };
 
+    function norm(i) {
+      return (24+i) % 12;
+    }
     function rot(i, gen=5) {
       return gen*(+i) % 12;
     }
@@ -158,7 +161,7 @@
         for (let j in audios) {
           if (j != i) {
             // A little overlap to not end too suddenly
-            setTimeout((k => () => audios[k].pause())(j), 100);
+            setTimeout((k => () => audios[k].pause())(j), 40);
           }
         }
       }
@@ -171,7 +174,7 @@
         audio_timer = null;
         return;
       }
-      audio_last_played = (24 + audio_last_played + audio_playing) % 12;
+      audio_last_played = norm(audio_last_played + audio_playing);
       playnote(audio_last_played, audio_sustain);
       audio_timer = setTimeout(playback, audio_speed);
     }
@@ -216,24 +219,25 @@
           this.segments.push(segment);
           segment.addEventListener("click", (j => e => {
             audio_playing = 0;
-            playnote((j+this.layout.note_shift) % 12, audio_sustain);
+            playnote(norm(j+this.layout.note_shift), audio_sustain);
           })(i));
           var note = this.svg.createChild("text", {
             "dominant-baseline": "middle",
             "text-anchor": "middle",
             "cursor": "pointer",
+            "fill": "white",
           });
           this.notes.push(note);
           note.addEventListener("click", (j => e => {
             audio_playing = 0;
-            playnote((j+this.layout.note_shift) % 12, audio_sustain);
+            playnote(norm(j+this.layout.note_shift), audio_sustain);
           })(i));
           var gen = this.svg.createChild("path", {
             "cursor": "pointer",
           });
           this.gen_elements.push(gen);
           gen.addEventListener("click", (j => e => {
-            this.gen.value = genstep[j]*genstep[j]*genstep[j]*this.rot(genidx[j]) % 12;
+            this.gen.value = norm(genstep[j]*genstep[j]*genstep[j]*this.rot(genidx[j]));
           })(i));
         }
         this.layout = new Proxy(Object.assign({}, Wheel.layout), {
@@ -269,7 +273,7 @@
             30*i+this.layout.rotate
           );
           this.notes[i].setAttributes(center);
-          this.notes[i].textContent = notes[(i+this.layout.note_shift) % 12].replace("is", "\u266F");
+          this.notes[i].textContent = notes[norm(i+this.layout.note_shift)].replace("is", "\u266F");
           this.notes[i].setAttributes({
             d,
             "display": this.layout.notes ? "inherit" : "none"
@@ -357,7 +361,7 @@
       Wheel.cycle_colors = function(amount) {
         var tmp = Array.from(Wheel.colors);
         for (var i=0; i<12; i++) {
-          Wheel.colors[i] = tmp[(i+amount+24) % 12];
+          Wheel.colors[i] = tmp[norm(i+amount)];
         }
       };
       Wheel.layout = new Proxy({
@@ -476,7 +480,7 @@
       class: "slider",
       type: "range",
       min: 0.125, max: 10,
-      value: audio_speed,
+      value: 1000/audio_speed,
       step: "any",
       style: "width: 150px;"
     });
@@ -509,7 +513,7 @@
     });
     ui.note_shift.input.addEventListener("input", () => {
       ui.note_shift.label.textContent = ui.note_shift.input.value;
-      main.layout.note_shift = (24 - (ui.note_shift.last_value + +ui.note_shift.input.value)) % 12;
+      main.layout.note_shift = norm(-ui.note_shift.last_value + +ui.note_shift.input.value);
     });
     ui.note_shift.input.addEventListener("mouseup", () => {
       ui.note_shift.label.textContent = ui.note_shift.name;
@@ -585,7 +589,7 @@
     });
     ui.rotate.input.addEventListener("change", () => {
       ui.rotate.label.textContent = ui.rotate.name;
-      ui.rotate.last_value = main.layout.rotate = main.layout.rotate + +ui.rotate.input.value;
+      ui.rotate.last_value = main.layout.rotate = ui.rotate.last_value + +ui.rotate.input.value;
       ui.rotate.input.value = 0;
     });
 
@@ -594,17 +598,44 @@
     wheel0.gen.value = 7;
     wheel1.layout.notes = false;
 
-    var options = {};
-    function audioblob() {
-      fetch("shepard_tone/shepard_tone.mp3.mp3", options) // set content header to array buffer
-        .then((reponse => reponse.arrayBuffer()))
-        .then((buffer) => {
-          var blob = new Blob([buffer], { type: 'audio/mp3' });
-          var url = window.URL.createObjectURL(blob);
-          const audio = new Audio();
-          audio.src = url;
-          audio.play();
+    var table = document.body.createChild("table");
+    Object.assign(table.style, {
+      borderSpacing: "0px",
+      borderCollapse: "separate",
+    });
+    var chord = [0,4,7];
+    for (var i=0; i<12; i++) {
+      var tr = table.createChild("tr");
+      Object.assign(tr.style, {
+        backgroundColor: main.colors[wheel0.rot(i)],
+        borderColor: main.colors[wheel0.rot(i)],
+        border: "1px solid " + main.colors[wheel0.rot(i)],
+        cursor: "pointer",
+      });
+      tr.addEventListener("click", (i => () => {
+        audio_playing = 0;
+        var sus = audio_sustain;
+        for (let [k,j] of chord.entries()) {
+          setTimeout(playnote.bind(this, norm(i+j), sus), 60*k);
+          sus = true;
+        }
+      })(i));
+      for (let [k,j] of chord.entries()) {
+        var td = tr.createChild("td");
+        td.textContent = notes[norm(i+j)].replace("is", "\u266F");
+        Object.assign(td.style, {
+          textAlign: "center",
+          verticalAlign: "middle",
+          color: "white",
+          border: "6px solid " + main.colors[wheel0.rot(i)],
+          backgroundColor: main.colors[wheel0.rot(i+j)],
+          width: "40px",
+          height: "40px",
         });
+        if (k > 0) {
+          td.style.borderLeftWidth = 0;
+        }
+      }
     }
   </script>
 </body>
