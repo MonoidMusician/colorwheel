@@ -2,6 +2,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
+  <title>Color Wheel</title>
   <style>
     svg {
       touch-action: manipulation;
@@ -9,6 +10,26 @@
   </style>
 </head>
 <body>
+  <details id="intro">
+    <summary>About</summary>
+    <p>The chromatic scale, represented by &#x2124;/12&#x2124;, has four generators, which come in positive/negative pairs: chromatic motion (&plusmn;1 = &plusmn;11) and the circle of fifths (&plusmn;5 = &plusmn;7). Melodic motion is all about chromatic closeness, but harmonic motion is flips it around and half steps are harmonically distant whereas thirds and fifths are closer. With this project I want to explore mapping this harmonic to colors, and what better way than by intercalating a chromatic spectrum around the circle of fifths.</p>
+
+    <p>Unfortunately, the way that computers represent colors is not perceptually uniform, so it is difficult to find a balanced chromatic palette. So that is a work in progress.</p>
+
+    <p>In order to map the notes to the circular shape, I use shepard tones, which create the illusion of continuously ascending or descending scales by phasing octaves in and out. (Read <a href="https://en.wikipedia.org/wiki/Shepard_tone">the Wikipedia article</a> for more!) The way I created them is not the best so this part is also a work in progress.</p>
+
+    <h3>UI</h3>
+    <p>Play notes by clicking on segments of the chromatic circles!</p>
+
+    <p>The sustain option mimics the sustain pedal to leave notes playing so they overlap. If you leave it off, only the last note played will sustain. The silence button will silence that too.</p>
+
+    <p>The little slices inside the segments will swap colors schemes, from melodic to harmonic (with left/right mirror).</p>
+
+    <p>You can play shepard scales by dragging the “play scale” slider to select the chromatic interval between each note (0 will stop it). You can adjust the scale speed with the slider below it. It starts at the last note played.</p>
+
+    <p>The next three sliders will rotate notes and colors around the wheel. They are momentary so they reset back to center when you release them.</p>
+  </details>
+  <br>
   <script type="text/javascript">
     // Wouldn't it be nice if the DOM API was nicer?
     var svgNS = "http://www.w3.org/2000/svg";
@@ -152,7 +173,7 @@
       }
       audio_last_played = (24 + audio_last_played + audio_playing) % 12;
       playnote(audio_last_played, audio_sustain);
-      var audio_timer = setTimeout(playback, audio_speed);
+      audio_timer = setTimeout(playback, audio_speed);
     }
     var gens = [1,5,7,11];
     var genstep = [1,1,1,5,5,5,7,7,7,11,11,11];
@@ -371,15 +392,15 @@
     ui.sustain = {};
     ui.sustain.name = "Sustain ";
     ui.sustain.div = document.body.createChild("div");
+    ui.sustain.label = ui.sustain.div.createChild("label", {
+      for: "sustain",
+    });
+    ui.sustain.label.textContent = ui.sustain.name;
     ui.sustain.input = ui.sustain.div.createChild("input", {
       id: "sustain",
       type: "checkbox",
       value: audio_sustain,
     });
-    ui.sustain.label = ui.sustain.div.createChild("label", {
-      for: "sustain",
-    });
-    ui.sustain.label.textContent = ui.sustain.name;
     ui.sustain.input.addEventListener("input", () => {
       audio_sustain = ui.sustain.input.checked;
       if (!audio_sustain) {
@@ -392,12 +413,22 @@
       audio_last_played = null; audio_playing = 0;
       playnote(null, false);
       playback();
+      if (ui.play_scale) {
+        ui.play_scale.label.textContent = ui.play_scale.name;
+        ui.play_scale.input.value = 0;
+      }
     });
 
     ui.play_scale = {};
     ui.play_scale.name = "Play scale";
     ui.play_scale.last_value = 0;
     ui.play_scale.div = document.body.createChild("div");
+    ui.play_scale.label = ui.play_scale.div.createChild("label", {
+      for: "play_scale",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.play_scale.label.textContent = ui.play_scale.name;
     ui.play_scale.input = ui.play_scale.div.createChild("input", {
       id: "play_scale",
       class: "slider",
@@ -407,12 +438,6 @@
       step: 1,
       style: "width: 150px;"
     });
-    ui.play_scale.label = ui.play_scale.div.createChild("label", {
-      for: "play_scale",
-      class: "slider_label",
-      style: "display: block; top: 100%; width: 150px; text-align: center;",
-    });
-    ui.play_scale.label.textContent = ui.play_scale.name;
     ui.play_scale.input.addEventListener("input", () => {
       if (ui.play_scale.input.value === "0") {
         ui.play_scale.label.textContent = "Stop";
@@ -421,37 +446,43 @@
       }
     });
     ui.play_scale.input.addEventListener("mouseup", () => {
-      ui.play_scale.label.textContent = ui.play_scale.name;
+      if (ui.play_scale.input.value == "0") {
+        ui.play_scale.label.textContent = ui.play_scale.name;
+      }
     });
     ui.play_scale.input.addEventListener("change", () => {
+      // Stop scale first
+      audio_playing = 0; playback();
       audio_playing = +ui.play_scale.input.value;
       if (audio_last_played === null) audio_last_played = 0;
       playback();
-      ui.play_scale.input.value = 0;
+      if (ui.play_scale.input.value == "0") {
+        ui.play_scale.label.textContent = ui.play_scale.name;
+      }
     });
 
     ui.audio_speed = {};
     ui.audio_speed.name = "Scale speed";
     ui.audio_speed.last_value = 0;
     ui.audio_speed.div = document.body.createChild("div");
-    ui.audio_speed.input = ui.audio_speed.div.createChild("input", {
-      id: "audio_speed",
-      class: "slider",
-      type: "range",
-      min: 100, max: 8000,
-      value: audio_speed,
-      step: 10,
-      style: "width: 150px;"
-    });
     ui.audio_speed.label = ui.audio_speed.div.createChild("label", {
       for: "audio_speed",
       class: "slider_label",
       style: "display: block; top: 100%; width: 150px; text-align: center;",
     });
     ui.audio_speed.label.textContent = ui.audio_speed.name;
+    ui.audio_speed.input = ui.audio_speed.div.createChild("input", {
+      id: "audio_speed",
+      class: "slider",
+      type: "range",
+      min: 0.125, max: 10,
+      value: audio_speed,
+      step: "any",
+      style: "width: 150px;"
+    });
     ui.audio_speed.input.addEventListener("input", () => {
-      ui.audio_speed.label.textContent = (""+(1000/+ui.audio_speed.input.value)).substring(0,5) + " Hz";
-      audio_speed = +ui.audio_speed.input.value;
+      ui.audio_speed.label.textContent = (""+(+ui.audio_speed.input.value)).substring(0,5) + " Hz";
+      audio_speed = 1000/+ui.audio_speed.input.value;
     });
     ui.audio_speed.input.addEventListener("mouseup", () => {
       ui.audio_speed.label.textContent = ui.audio_speed.name;
@@ -461,6 +492,12 @@
     ui.note_shift.name = "Rotate notes";
     ui.note_shift.last_value = 0;
     ui.note_shift.div = document.body.createChild("div");
+    ui.note_shift.label = ui.note_shift.div.createChild("label", {
+      for: "note_shift",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.note_shift.label.textContent = ui.note_shift.name;
     ui.note_shift.input = ui.note_shift.div.createChild("input", {
       id: "note_shift",
       class: "slider",
@@ -470,12 +507,6 @@
       step: 1,
       style: "width: 150px;"
     });
-    ui.note_shift.label = ui.note_shift.div.createChild("label", {
-      for: "note_shift",
-      class: "slider_label",
-      style: "display: block; top: 100%; width: 150px; text-align: center;",
-    });
-    ui.note_shift.label.textContent = ui.note_shift.name;
     ui.note_shift.input.addEventListener("input", () => {
       ui.note_shift.label.textContent = ui.note_shift.input.value;
       main.layout.note_shift = (24 - (ui.note_shift.last_value + +ui.note_shift.input.value)) % 12;
@@ -487,10 +518,48 @@
       ui.note_shift.last_value = +ui.note_shift.input.value;
       ui.note_shift.input.value = 0;
     });
-    /*
+
+    ui.cycle = {};
+    ui.cycle.name = "Cycle colors";
+    ui.cycle.last_value = 0;
+    ui.cycle.div = document.body.createChild("div");
+    ui.cycle.label = ui.cycle.div.createChild("label", {
+      for: "cycle",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.cycle.label.textContent = ui.cycle.name;
+    ui.cycle.input = ui.cycle.div.createChild("input", {
+      id: "cycle",
+      class: "slider",
+      type: "range",
+      min: -11, max: 11,
+      value: 0,
+      step: 1,
+      style: "width: 150px;"
+    });
+    ui.cycle.input.addEventListener("input", () => {
+      ui.cycle.label.textContent = ui.cycle.input.value;
+      main.cycle_colors(24 + ui.cycle.last_value + -ui.cycle.input.value);
+      ui.cycle.last_value = +ui.cycle.input.value;
+    });
+    ui.cycle.input.addEventListener("mouseup", () => {
+      ui.cycle.label.textContent = ui.cycle.name;
+    });
+    ui.cycle.input.addEventListener("change", () => {
+      ui.cycle.input.value = 0;
+    });
+
     ui.rotate = {};
+    ui.rotate.name = "Rotate wheel";
     ui.rotate.last_value = main.layout.rotate;
     ui.rotate.div = document.body.createChild("div");
+    ui.rotate.label = ui.rotate.div.createChild("label", {
+      for: "rotate",
+      class: "slider_label",
+      style: "display: block; top: 100%; width: 150px; text-align: center;",
+    });
+    ui.rotate.label.textContent = ui.rotate.name;
     ui.rotate.input = ui.rotate.div.createChild("input", {
       id: "rotate",
       class: "slider",
@@ -500,15 +569,9 @@
       step: 15,
       style: "width: 150px;"
     });
-    ui.rotate.label = ui.rotate.div.createChild("label", {
-      for: "rotate",
-      class: "slider_label",
-      style: "display: block; top: 100%; width: 150px; text-align: center;",
-    });
-    ui.rotate.label.textContent = "\xa0";
     ui.rotate.input.addEventListener("input", () => {
-      ui.rotate.label.textContent = ui.rotate.input.value;
-      main.layout.rotate = ui.rotate.last_value - +ui.rotate.input.value;
+      ui.rotate.label.textContent = ui.rotate.input.value + "\u00B0";
+      main.layout.rotate = ui.rotate.last_value + +ui.rotate.input.value;
     });
     ui.rotate.input.addEventListener("mousemove", (e) => {
       if (e.shiftKey) {
@@ -518,41 +581,11 @@
       }
     });
     ui.rotate.input.addEventListener("mouseup", () => {
-      ui.rotate.label.textContent = "\xa0";
-    });
-    ui.rotate.input.addEventListener("change", () => {
-      ui.rotate.last_value = main.layout.rotate = main.layout.rotate - +ui.rotate.input.value;
-      ui.rotate.input.value = 0;
-    });
-    */
-    ui.rotate = {};
-    ui.rotate.name = "Cycle colors";
-    ui.rotate.last_value = 0;
-    ui.rotate.div = document.body.createChild("div");
-    ui.rotate.input = ui.rotate.div.createChild("input", {
-      id: "rotate",
-      class: "slider",
-      type: "range",
-      min: -11, max: 11,
-      value: 0,
-      step: 1,
-      style: "width: 150px;"
-    });
-    ui.rotate.label = ui.rotate.div.createChild("label", {
-      for: "rotate",
-      class: "slider_label",
-      style: "display: block; top: 100%; width: 150px; text-align: center;",
-    });
-    ui.rotate.label.textContent = ui.rotate.name;
-    ui.rotate.input.addEventListener("input", () => {
-      ui.rotate.label.textContent = ui.rotate.input.value;
-      main.rotate_colors(24 + ui.rotate.last_value + -ui.rotate.input.value);
-      ui.rotate.last_value = +ui.rotate.input.value;
-    });
-    ui.rotate.input.addEventListener("mouseup", () => {
       ui.rotate.label.textContent = ui.rotate.name;
     });
     ui.rotate.input.addEventListener("change", () => {
+      ui.rotate.label.textContent = ui.rotate.name;
+      ui.rotate.last_value = main.layout.rotate = main.layout.rotate + +ui.rotate.input.value;
       ui.rotate.input.value = 0;
     });
 
