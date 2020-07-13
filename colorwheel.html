@@ -39,25 +39,30 @@
       <input id="shepard_max_octave" type="range" min="0" max="8" step="1" value="8">
       <label for="shepard_max_octave">Maximum octave</label>
       <br>
-      <span id="shepard_ramp_value" style="display: inline-block; width: 1em;">1</span>
-      <input id="shepard_ramp" type="range" min="0" max="4" step="1" value="1">
-      <label for="shepard_ramp">Octaves to reach full volume</label>
+      <span id="shepard_ramp_up_value" style="display: inline-block; width: 1em;">1</span>
+      <input id="shepard_ramp_up" type="range" min="0" max="4" step="1" value="1">
+      <label for="shepard_ramp_up">Octaves to reach full volume</label>
+      <br>
+      <span id="shepard_ramp_down_value" style="display: inline-block; width: 1em;">2</span>
+      <input id="shepard_ramp_down" type="range" min="0" max="4" step="1" value="2">
+      <label for="shepard_ramp_down">Octaves to come down from full volume</label>
       <br>
       <span id="shepard_note_name" style="display: inline-block; width: 1em;">C&nbsp;</span>
       <input id="shepard_note" type="range" min="0" max="11" step="1" value="0">
       <label for="shepard_note">Starting pitch</label>
       <p>Table of volumes (0.0–1.0) for each note pitch (rows 0–11) and octave (columns 0–8).</p>
-      <table id="shepard_table"></table>
+      <table id="shepard_table" style="border-collapse: collapse;"></table>
       <p>CSV data of each MIDI note number and its volume</p>
       <pre id="shepard_csv" style="max-height: 15em; overflow: auto;"></pre>
       <script>
-        var inputs = ["shepard_min_octave", "shepard_max_octave", "shepard_ramp", "shepard_note"];
+        var inputs = ["shepard_min_octave", "shepard_max_octave", "shepard_ramp_up", "shepard_ramp_down", "shepard_note"];
         var note_names = ["C\xa0","C\u266F","D\xa0","D\u266F","E\xa0","F\xa0","F\u266F","G\xa0","G\u266F","A\xa0","A\u266F","B\xa0"];
         var ramping = (i, min, max) => max==min ? 1 : (i+1-min)/(max-min);
         function recalc() {
           var min = +document.getElementById("shepard_min_octave").value;
           var max = +document.getElementById("shepard_max_octave").value;
-          var ramp = +document.getElementById("shepard_ramp").value;
+          var ramp_up = +document.getElementById("shepard_ramp_up").value;
+          var ramp_down = +document.getElementById("shepard_ramp_down").value;
           var note = +document.getElementById("shepard_note").value;
           var sums = [0,0,0,0,0,0,0,0,0,0,0,0];
           var data = {};
@@ -65,22 +70,22 @@
           var csv = "";
           var nodes = [
             note + 12*min,
-            note + 12*(min + ramp),
-            note + 12*(max + 1 - ramp),
+            note + 12*(min + ramp_up),
+            note + 12*(max + 1 - ramp_down),
             note + 12*(max + 1),
           ];
           for (var i = nodes[0]; i < nodes[3]; i++) {
-            data[i] = ramp == 0 ? 1 : Math.min(1, ramping(i, nodes[0], nodes[1]), 1-ramping(i, nodes[2], nodes[3]));
+            data[i] = Math.min(1, ramp_up ? ramping(i, nodes[0], nodes[1]) : 1, ramp_down ? 1-ramping(i, nodes[2], nodes[3]) : 1);
             sums[i % 12] += data[i];
             if (data[i]) {
               if (!tabular[i % 12]) tabular[i % 12] = {};
-              tabular[i % 12][(i - i % 12)/12] = data[i];
+              tabular[i % 12][(i - i % 12)/12] = data[i].toFixed(5);
             }
             csv += i + ", " + data[i] + "\n";
           }
           document.getElementById("shepard_csv").textContent = csv;
           var table = document.getElementById("shepard_table");
-          console.log(tabular);
+          console.log(tabular, sums);
           puttable(table, tabulate(tabular));
         }
         function tabulate(tabular) {
@@ -90,37 +95,45 @@
           var cols = new Set();
           rows.forEach(i => Object.keys(tabular[i]).forEach(j => cols.add(j)));
           cols = new Set(Array.from(cols).sort());
-          console.log(rows, cols);
-          result.push([""].concat(Array.from(cols)));
+          result.push(["Pitch\xa0", "number"].concat(Array.from(cols), "(octave)"));
           for (let i of rows) {
             var row = Array.from(cols).map(j => tabular[i][j]);
-            result.push([i].concat(row));
+            result.push([note_names[i], i].concat(row));
           }
-          console.log(result);
           return result;
         }
-        function adjust(parent, child, nodes) {
+        function adjust(parent, nodes) {
           var length = nodes.length;
-          while (parent.childElementCount > length) {
+          while (parent.lastChild) {
             parent.removeChild(parent.lastChild);
           }
-          while (parent.childElementCount < length) {
-            parent.appendChild(document.createElement(child));
-          }
           for (let i in nodes) {
-            if (typeof nodes[i] === "string" || typeof nodes[i] === "number") {
-              parent.children[i].textContent = nodes[i];
-            } else if (typeof nodes[i] === "undefined" || nodes[i] === null) {
+            let [tag, value] = nodes[i];
+            parent.appendChild(document.createElement(tag));
+            if (typeof value === "string" || typeof value === "number") {
+              parent.children[i].textContent = value;
+            } else if (typeof value === "undefined" || value === null) {
               parent.children[i].textContent = "";
             } else {
-              nodes[i](parent.children[i]);
+              value(parent.children[i]);
             }
           }
         }
         function puttable(table, tabulated) {
-          adjust(table, "tr", tabulated.map(row => tr => {
-            adjust(tr, "td", row);
-          }));
+          adjust(table, tabulated.map((row, i) => ["tr", tr => {
+            adjust(tr, row.map((entry, j) => {
+              var header = !i || j < 2;
+              return [ header ? "th" : "td", td => {
+                td.textContent = entry;
+                if (!header) {
+                  td.style.width = "2em";
+                  td.style.backgroundColor = "rgb(255," + (155+100*(1-entry)) + ",255)";
+                  td.style.border = "1px solid #2c0fa0";
+                  td.style.padding = "0.25em";
+                }
+              }];
+            }));
+          }]));
         }
         inputs.forEach(name => {
           var i = document.getElementById(name);
