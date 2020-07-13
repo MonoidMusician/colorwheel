@@ -10,7 +10,7 @@
   </style>
 </head>
 <body>
-  <details id="intro">
+  <details id="intro" open>
     <summary>About</summary>
     <p>The chromatic scale, represented by &#x2124;/12&#x2124;, has four generators, which come in positive/negative pairs: chromatic motion (&plusmn;1 = &plusmn;11) and the circle of fifths (&plusmn;5 = &plusmn;7). Melodic motion is all about chromatic closeness, but harmonic motion is flips it around and half steps are harmonically distant whereas thirds and fifths are closer. With this project I want to explore mapping this harmonic to colors, and what better way than by intercalating a chromatic spectrum around the circle of fifths.</p>
 
@@ -28,6 +28,118 @@
     <p>You can play shepard scales by dragging the “play scale” slider to select the chromatic interval between each note (0 will stop it). You can adjust the scale speed with the slider below it. It starts at the last note played.</p>
 
     <p>The next three sliders will rotate notes and colors around the wheel. They are momentary so they reset back to center when you release them.</p>
+
+    <details open>
+      <summary>Shepard tone calculator</summary>
+      <span id="shepard_min_octave_value" style="display: inline-block; width: 1em;">1</span>
+      <input id="shepard_min_octave" type="range" min="0" max="8" step="1" value="1">
+      <label for="shepard_min_octave">Minimum octave</label>
+      <br>
+      <span id="shepard_max_octave_value" style="display: inline-block; width: 1em;">8</span>
+      <input id="shepard_max_octave" type="range" min="0" max="8" step="1" value="8">
+      <label for="shepard_max_octave">Maximum octave</label>
+      <br>
+      <span id="shepard_ramp_value" style="display: inline-block; width: 1em;">1</span>
+      <input id="shepard_ramp" type="range" min="0" max="4" step="1" value="1">
+      <label for="shepard_ramp">Octaves to reach full volume</label>
+      <br>
+      <span id="shepard_note_name" style="display: inline-block; width: 1em;">C&nbsp;</span>
+      <input id="shepard_note" type="range" min="0" max="11" step="1" value="0">
+      <label for="shepard_note">Starting pitch</label>
+      <p>Table of volumes (0.0–1.0) for each note pitch (rows 0–11) and octave (columns 0–8).</p>
+      <table id="shepard_table"></table>
+      <p>CSV data of each MIDI note number and its volume</p>
+      <pre id="shepard_csv" style="max-height: 15em; overflow: auto;"></pre>
+      <script>
+        var inputs = ["shepard_min_octave", "shepard_max_octave", "shepard_ramp", "shepard_note"];
+        var note_names = ["C\xa0","C\u266F","D\xa0","D\u266F","E\xa0","F\xa0","F\u266F","G\xa0","G\u266F","A\xa0","A\u266F","B\xa0"];
+        var ramping = (i, min, max) => max==min ? 1 : (i+1-min)/(max-min);
+        function recalc() {
+          var min = +document.getElementById("shepard_min_octave").value;
+          var max = +document.getElementById("shepard_max_octave").value;
+          var ramp = +document.getElementById("shepard_ramp").value;
+          var note = +document.getElementById("shepard_note").value;
+          var sums = [0,0,0,0,0,0,0,0,0,0,0,0];
+          var data = {};
+          var tabular = {};
+          var csv = "";
+          var nodes = [
+            note + 12*min,
+            note + 12*(min + ramp),
+            note + 12*(max + 1 - ramp),
+            note + 12*(max + 1),
+          ];
+          for (var i = nodes[0]; i < nodes[3]; i++) {
+            data[i] = ramp == 0 ? 1 : Math.min(1, ramping(i, nodes[0], nodes[1]), 1-ramping(i, nodes[2], nodes[3]));
+            sums[i % 12] += data[i];
+            if (data[i]) {
+              if (!tabular[i % 12]) tabular[i % 12] = {};
+              tabular[i % 12][(i - i % 12)/12] = data[i];
+            }
+            csv += i + ", " + data[i] + "\n";
+          }
+          document.getElementById("shepard_csv").textContent = csv;
+          var table = document.getElementById("shepard_table");
+          console.log(tabular);
+          puttable(table, tabulate(tabular));
+        }
+        function tabulate(tabular) {
+          var result = [];
+          var rows = new Set(Object.keys(tabular));
+          if (!rows.size) return result;
+          var cols = new Set();
+          rows.forEach(i => Object.keys(tabular[i]).forEach(j => cols.add(j)));
+          cols = new Set(Array.from(cols).sort());
+          console.log(rows, cols);
+          result.push([""].concat(Array.from(cols)));
+          for (let i of rows) {
+            var row = Array.from(cols).map(j => tabular[i][j]);
+            result.push([i].concat(row));
+          }
+          console.log(result);
+          return result;
+        }
+        function adjust(parent, child, nodes) {
+          var length = nodes.length;
+          while (parent.childElementCount > length) {
+            parent.removeChild(parent.lastChild);
+          }
+          while (parent.childElementCount < length) {
+            parent.appendChild(document.createElement(child));
+          }
+          for (let i in nodes) {
+            if (typeof nodes[i] === "string" || typeof nodes[i] === "number") {
+              parent.children[i].textContent = nodes[i];
+            } else if (typeof nodes[i] === "undefined" || nodes[i] === null) {
+              parent.children[i].textContent = "";
+            } else {
+              nodes[i](parent.children[i]);
+            }
+          }
+        }
+        function puttable(table, tabulated) {
+          adjust(table, "tr", tabulated.map(row => tr => {
+            adjust(tr, "td", row);
+          }));
+        }
+        inputs.forEach(name => {
+          var i = document.getElementById(name);
+          var o = document.getElementById(name+"_value");
+          var n = document.getElementById(name+"_name");
+          i.addEventListener("input", () => {
+            var v = i.value;
+            if (o) {
+              o.textContent = v;
+            }
+            if (n) {
+              n.textContent = note_names[v];
+            }
+            recalc();
+          });
+        });
+        recalc();
+      </script>
+    </details>
   </details>
   <br>
   <script type="text/javascript">
