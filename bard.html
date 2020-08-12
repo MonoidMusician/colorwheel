@@ -55,23 +55,64 @@
 <div id="content">
   <h1>The Shape of Color</h1>
   <h2 style="color: coral;">About</h2>
-  <p>Hello! As part of the <a href="https://cce.bard.edu/community/tls/">Bard TLS project</a> that I help co-lead, Girls Who Code, I'm putting on a little workshop and sharing some things I know about colors in the context of programming.</p>
-  <p>Our Girls Who Code project usually goes to Kingston High School once a week to facilitate an after-school club for high-school girls to learn programming/coding. Because of the pandemic, we had to stop going last semester and won't be going this semester. I'm not sure when it will be safe for us to actively go to Kingston again, but we would love volunteers or student leaders and you're welcome to stay in touch for when the time comes.</p>
+  <p>Hello! As part of the <a href="https://cce.bard.edu/community/tls/">Bard TLS project</a> that I help co-lead, Girls Who Code, I’m putting on a little workshop and sharing some things I know about colors in the context of programming.</p>
+  <p>Our Girls Who Code project usually goes to Kingston High School once a week to facilitate an after-school club for high-school girls to learn programming/coding. Because of the pandemic, we had to stop going last semester and won’t be going this semester. I’m not sure when it will be safe for us to actively go to Kingston again, but we would love volunteers or student leaders and you're welcome to stay in touch for when the time comes.</p>
   <p>When we stopped in the spring, our students were working with the <a href="https://processing.org/">Processing language</a> to create graphics and we were just starting to discuss and explore colors, which led me to think of talking about colors for this presentation. (I also just love talking and thinking about colors and programming.)</p>
-  <p>If you can't join these presentations for whatever reason, I will be posting more resources here for you to explore if you're curious!</p>
+  <p>If you can’t join these presentations for whatever reason, I will be posting more resources here for you to explore if you’re curious!</p>
   <div class="center">
   <h2 style="color: #0f580f;">Presentation Times & Links</h2>
   <a class="time" href="https://zoom.us/j/98143452114?pwd=ZXlhbFZEcStpNHdYeFI1QitmUVhXdz09">Friday Aug 14, 7pm</a> <span class="amp">&</span> <a class="time" href="https://zoom.us/j/93085902301?pwd=RG44U0RpMVcwVTBZcWtKNjIxY1RYUT09">Monday Aug 17, 7pm</a>.
   </div>
   <h2 style="color: #59a4b5;">Resources</h2>
+  <h3>Info & Articles</h3>
+  <ul>
+    <li><a href="https://arstechnica.com/science/2009/02/yes-virgina-there-is-a-magenta/">“Yes, Virginia, there <em>is</em> a magenta”</a> – covers some background on how color is perceived and why there isn’t a specific wavelength that is magenta (etc.), alone, but various combinations of wavelengths will produce our perception of those colors.
+    </li>
+    <li>Color spaces – modes of organizing colors numerically and spatially.
+      <ul>
+        <li><a href="https://programmingdesignsystems.com/color/color-models-and-color-spaces/index.html">Color models and color spaces</a> – an introduction to RGB, CMYK, and color spaces in general. RGB is how computers display colors on a screen, and CMYK is what printers use to put down colors with ink, but they both don’t really capture how we perceive color.
+        </li>
+        <li><a href="https://en.wikipedia.org/wiki/Munsell_color_system">Munsell color system</a> – how can we organize colors uniformly? It turns out that a sphere doesn’t cut it!
+        </li>
+        <li><a href="https://www.vis4.net/blog/2011/12/avoid-equidistant-hsv-colors/">How To Avoid Equidistant HSV Colors</a> – an introduction to the alternatives to RGB and HSV.
+      </ul>
+    </li>
+    <li>Cubehelix/perceptually uniform color scales, an alternative to rainbow “scales” which vary in hue but not intensity. This one has a lot of links because I think it’s very important, plus a couple of paragraphs of explanation hidden under this summary item (click to open):
+      <details>
+        <summary>Summary</summary>
+        <p>The idea of perceptually uniform color scales is to more effectively communicate information such as intensity or heat using a visual scale that changes in hue (like a rainbow) while consistently getting darker or lighter. This allows people who are colorblind to also be able to assess the intensity better than with a rainbow color scale, which only changes in hue and not intensity. (Or worse – a badly designed rainbow color scale will fluctuate in intensity, up and down, as it goes up!)</p>
+
+        <p>This is an area where designing things with disabled people in mind actually helps abled people out, since it is not only more uniform for people who are color blind, but also more uniform for people with full color vision too. It turns out that accessible design is often just plain good design!</p>
+
+        <p>So please, if you’re designing anything that uses colors to communicate a linear scale, please choose a perceptually uniform color scheme to better communicate your ideas!!!!</p>
+      </details>
+      <ul>
+        <li><a href="https://mycarta.wordpress.com/2012/05/29/the-rainbow-is-dead-long-live-the-rainbow-series-outline/">The Rainbow Is Dead … Long Live the Rainbow!</a> – a great series of blog posts that digs into the issues at play, and the problems with the rainbow sacle. Worth a read, or at least a skim. (Okay, I admit I just skimmed it. But it looks good!)
+        </li>
+        <li><a href="http://www.mrao.cam.ac.uk/~dag/CUBEHELIX/">Dave Green’s post on cubehelix</a> – I believe this is the original post (at least on the cubehelix idea).
+        </li>
+        <li><a href="https://bl.ocks.org/mbostock/11415064">Cubehelix implementation in D3.js</a> – a couple examples of the scale using D3.js, which is a popular JavaScript library that helps people write complex visuals and animations for the web.
+        </li>
+        <li><a href="https://observablehq.com/@vomc/untitled">More D3.js examples</a> – you can edit some of these examples.
+        </li>
+        <li><a href="">https://www.vis4.net/blog/2011/12/avoid-equidistant-hsv-colors/</a>
+        </li>
+      </ul>
+    </li>
+    <li><a href="https://en.wikipedia.org/wiki/Color_blindness">Color blindness</a> on Wikipedia.
+    </li>
+  </ul>
+  <h3>Tools</h3>
   <ul>
     <li><a href="https://monoidmusician.github.io/colorwheel/">My musical colorwheel!</a> – this is my personal project to investigate a way to relate the chromatic color wheel to the chromatic scale, and how I perceive sound and color.
     </li>
-    <li><a href="https://arstechnica.com/science/2009/02/yes-virgina-there-is-a-magenta/">“Yes, Virginia, there <em>is</em> a magenta”</a>
+    <li><a href="https://color.adobe.com/">Adobe Color</a> – the go-to website for exploring color palettes (<a href="https://helpx.adobe.com/creative-cloud/adobe-color-accessibility-tools.html">now with accessibility tools!</a>).
+    </li>
+    <li><a href="http://mkweb.bcgsc.ca/colorsummarizer/">Color summarizer tool</a> – this tool will show you color clusters in an image, which is especially important in photographs where individual pixels will vary slightly even though we would perceive a region/object as having a single color. This technique is actually used in some apps to create themes based on album artwork, for example. (I think iTunes might do this somewhere? Someone help me out here.) I used it to make themes based on mine and my brother’s profile pictures once.
     </li>
   </ul>
   <h2 style="color: #b96aa4;">Me</h2>
-  Hi! I'm Nick Scheel, a third-year conservatory cellist and math major. (You can tell I'm a conservatory student because I just called myself a third-year.) Email me at <a href="mailto:ns5044@bard.edu">ns5044@bard.edu</a> if you have any questions or want to talk about programming, math, or cello (or linguistics).
+  Hi! I’m Nick Scheel, a third-year conservatory cellist and math major. (You can tell I’m a conservatory student because I just called myself a third-year.) Email me at <a href="mailto:ns5044@bard.edu">ns5044@bard.edu</a> if you have any questions or want to talk about programming, math, or cello (or linguistics).
   <br>
   <br>
   <p class="small">(Yes, I threw this website together at 1am in the morning. No, I am not a visual designer. Why would you ask? xD)</p>
