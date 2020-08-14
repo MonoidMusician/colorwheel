@@ -49,6 +49,15 @@
       text-align: center;
       margin: 5em 0;
     }
+    .gallery-holder > * {
+      margin: 4em 0;
+    }
+    .gallery {
+      width: 100%;
+    }
+    .gallery-half {
+      width: 47%;
+    }
   </style>
 </head>
 <body>
@@ -75,6 +84,11 @@
         <li><a href="https://en.wikipedia.org/wiki/Munsell_color_system">Munsell color system</a> – how can we organize colors uniformly? It turns out that a sphere doesn’t cut it!
         </li>
         <li><a href="https://www.vis4.net/blog/2011/12/avoid-equidistant-hsv-colors/">How To Avoid Equidistant HSV Colors</a> – an introduction to the alternatives to RGB and HSV.
+        </li>
+        <li><a href="https://midimagic.sgc-hosting.com/huvision.htm">Human Color Vision</a> – a really nice overview of all the different aspects of color (also has a page on <a href="https://midimagic.sgc-hosting.com/pricol.htm">how primary colors are taught</a>).
+        </li>
+        <li><a href="https://youtu.be/UBX2QQHlQ_I">Stand-up Maths’ “Spreadsheets”</a> on YouTube – about halfway through you can see a closeup of an LCD. (worth watching for the laughs!)
+        </li>
       </ul>
     </li>
     <li>Cubehelix/perceptually uniform color scales, an alternative to rainbow “scales” which vary in hue but not intensity. This one has a lot of links because I think it’s very important, plus a couple of paragraphs of explanation hidden under this summary item (click to open):
@@ -101,6 +115,7 @@
     </li>
     <li><a href="https://en.wikipedia.org/wiki/Color_blindness">Color blindness</a> on Wikipedia.
     </li>
+    <li><a href="https://theoatmeal.com/comics/mantis_shrimp">The weird and wonderful Mantis Shrimp</a>.</li>
   </ul>
   <h3>Tools</h3>
   <ul>
@@ -110,7 +125,35 @@
     </li>
     <li><a href="http://mkweb.bcgsc.ca/colorsummarizer/">Color summarizer tool</a> – this tool will show you color clusters in an image, which is especially important in photographs where individual pixels will vary slightly even though we would perceive a region/object as having a single color. This technique is actually used in some apps to create themes based on album artwork, for example. (I think iTunes might do this somewhere? Someone help me out here.) I used it to make themes based on mine and my brother’s profile pictures once.
     </li>
+    <li><a href="https://blog.xkcd.com/2010/05/03/color-survey-results/">xkcd color survey blog post</a> (and <a href="https://xkcd.com/color/rgb/">just the results</a>) – I’d be remiss if I didn’t mention xkcd!
+    </li>
+    <li><a href="http://illusionoftheyear.com/">Illusions of the Year</a> – a collection of great visual illusions, some of which involve colors and tricks in our perception of color and movement! Some nice ones:
+      <ul>
+        <li><a href="http://illusionoftheyear.com/2015/06/splitting-colors/">Splitting Colors</a></li>
+        <li><a href="http://illusionoftheyear.com/2016/06/remote-controls/">Remote Controls</a></li>
+        <li><a href="http://illusionoftheyear.com/2016/06/lights-and-darks-in-vision/">Lights and Darks in Vision</a></li>
+        <li><a href="http://illusionoftheyear.com/2018/10/white-gray-red/">White + Gray = Red</a></li>
+      </ul>
+    </li>
   </ul>
+  <h3>Gallery</h3>
+  <details>
+    <summary>Show/hide gallery</summary>
+    <ul style="list-style: none;" class="gallery-holder">
+      <li><a href="https://www.britannica.com/technology/prism-optics">Prism refraction: <img class="gallery" src="https://cdn.britannica.com/78/149178-050-8E28AD25/light-prism-color-angle-colors-wavelength-wavelengths.jpg"></img></a>
+      <li><a href="https://colourware.wordpress.com/2010/02/07/why-is-hue-circular/">Color wheel with extraspectral hues highlighted: <img class="gallery" src="https://colourware.files.wordpress.com/2010/02/newton-circle.jpg"></img></a>
+      <li><a href="https://www.unm.edu/~toolson/human_cone_response.htm">Human cone wavelength response: <img class="gallery" src="https://www.unm.edu/~toolson/human_cone_action_spectra.gif"></img></a>
+      <li><a href="https://www.shutterstock.com/video/clip-1861414-extreme-closeup-pixels-lcd-tv">
+        Closeup of LCD screen: <img class="gallery" src="https://ak.picdn.net/shutterstock/videos/1861414/thumb/1.jpg"></img></a>
+      </li>
+      <li><a href="https://en.wikipedia.org/wiki/SRGB">sRGB gamut inside CIE 1931 xy chromaticity diagram: <img class="gallery" src="https://upload.wikimedia.org/wikipedia/commons/6/60/Cie_Chart_with_sRGB_gamut_by_spigget.png"></img></a>
+      </li>
+      <li>sRGB gamut and visible gamut visualized in CIELCHab color space from <a href="https://en.wikipedia.org/wiki/CIELAB_color_space#Cylindrical_representation:_CIELCh_or_CIEHLC">Wikipedia</a>: <br/><iframe class="gallery-half" src="https://upload.wikimedia.org/wikipedia/commons/8/80/SRGB_gamut_within_CIELCHab_color_space_mesh.webm"></iframe><iframe class="gallery-half" src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Visible_gamut_within_CIELCHab_color_space_D65_whitepoint_mesh.webm"></iframe>
+      </li>
+      <li><a href="https://en.wikipedia.org/wiki/CIELAB_color_space">CIELAB color space from top and front: <img class="gallery" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/CIELAB_color_space_top_view.png/440px-CIELAB_color_space_top_view.png"></img><img class="gallery" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/CIELAB_color_space_front_view.png/440px-CIELAB_color_space_front_view.png"></img></a>
+      </li>
+    </ul>
+  </details>
   <h2 style="color: #b96aa4;">Me</h2>
   Hi! I’m Nick Scheel, a third-year conservatory cellist and math major. (You can tell I’m a conservatory student because I just called myself a third-year.) Email me at <a href="mailto:ns5044@bard.edu">ns5044@bard.edu</a> if you have any questions or want to talk about programming, math, or cello (or linguistics).
   <br>
