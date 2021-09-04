@@ -45,7 +45,9 @@
     <h3>Colors</h3>
     <p>You can choose new colors by changing them on the color picker, courtesy of <a href="https://iro.js.org/">iro.js</a>.</p>
 
-    <p>Share the colors by copying the URL of this page, which will include the colors you chose!</p>
+    <p>Share the colors by copying the <a id="self-ref" href="#">URL of this page</a>, which will include the colors you chose!</p>
+
+    <p><a id="reset" href="#">Reset colors</a></p>
 
     <details>
       <summary><h2 style="display: inline-block; line-height: 0">Shepard tone calculator</h2></summary>
@@ -860,6 +862,8 @@
         s.set(i, main.colors[i].substring(1));
       }
       window.location.replace("#"+s.toString());
+      document.getElementById("self-ref").href = window.location;
+      document.getElementById("reset").href = location.protocol + "//" + location.host + location.pathname;
     }
     parseHash();
 
