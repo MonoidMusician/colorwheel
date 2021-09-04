@@ -47,7 +47,9 @@
 
     <p>Share the colors by copying the <a id="self-ref" href="#">URL of this page</a>, which will include the colors you chose!</p>
 
-    <p><a id="reset" href="#">Reset colors</a></p>
+    <p><a id="reset" href="">Reset to default colors</a></p>
+
+    <p><a id="blank-slate" href="#0=666666&1=666666&2=666666&3=666666&4=666666&5=666666&6=666666&7=666666&8=666666&9=666666&10=666666&11=666666">Blank slate / tabula rasa</a></p>
 
     <details>
       <summary><h2 style="display: inline-block; line-height: 0">Shepard tone calculator</h2></summary>
@@ -300,6 +302,11 @@
           "#e24328", "#fc6c25", "#fca326", "#fdc743", "#ffe560", "#bae223",
           "#22bc61", "#2d95bd", "#3871ab", "#3f4c9a", "#554488", "#9b2f48",
         ],
+      "blankslate":
+        [
+          "#666666", "#666666", "#666666", "#666666", "#666666", "#666666",
+          "#666666", "#666666", "#666666", "#666666", "#666666", "#666666",
+        ],
       "mine0":
         [
           "#15bc1d", "#3397ad", "#3871ab", "#3f4c9a", "#554488", "#9b034f",
@@ -311,6 +318,7 @@
           "#eb002a", "#fc3200", "#fc7a00", "#fda03d", "#ffc27d", "#b5e24b",
         ],
     };
+    var defaultPalette = "mine0";
 
     var notes = ["c","cis","d","dis","e","f","fis","g","gis","a","ais","b"];
     var audios = [];
@@ -580,7 +588,7 @@
     };
 
     var main = WheelGroup();
-    main.palette("mine0");
+    main.palette(defaultPalette);
 
     var nbsp = "\xa0";
 
@@ -863,8 +871,15 @@
       }
       window.location.replace("#"+s.toString());
       document.getElementById("self-ref").href = window.location;
-      document.getElementById("reset").href = location.protocol + "//" + location.host + location.pathname;
     }
+    document.getElementById("reset").href = location.protocol + "//" + location.host + location.pathname;
+    document.getElementById("blank-slate").href = location.protocol + "//" + location.host + location.pathname + "#0=666666&1=666666&2=666666&3=666666&4=666666&5=666666&6=666666&7=666666&8=666666&9=666666&10=666666&11=666666";
+    document.getElementById("reset").addEventListener("click", e => {
+      main.palette(defaultPalette);
+    });
+    document.getElementById("blank-slate").addEventListener("click", e => {
+      main.palette("blankslate");
+    });
     parseHash();
 
     var tables = document.body.createChild("tables");
