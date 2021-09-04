@@ -7,12 +7,25 @@
     svg {
       touch-action: manipulation;
     }
+    body {
+      font-size: 14px;
+    }
+    h1 {
+      color: #009242;
+    }
+    h2 {
+      color: #0065bd;
+    }
+    h3 {
+      color: #a100bd;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
 </head>
 <body>
   <details id="intro" open>
-    <summary>About</summary>
-    <p>The chromatic scale, represented by &#x2124;/12&#x2124;, has four generators, which come in positive/negative pairs: chromatic motion (&plusmn;1 = &plusmn;11) and the circle of fifths (&plusmn;5 = &plusmn;7). Melodic motion is all about chromatic closeness, but harmonic motion is flips it around and half steps are harmonically distant whereas thirds and fifths are closer. With this project I want to explore mapping this harmonic to colors, and what better way than by intercalating a chromatic spectrum around the circle of fifths.</p>
+    <summary><h1 style="display: inline-block; line-height: 0">About</h1></summary>
+    <p>The chromatic scale, represented by &#x2124;/12&#x2124;, has four generators, which come in positive/negative pairs: chromatic motion (&plusmn;1 = &#x2213;11) and the circle of fifths (&plusmn;5 = &#x2213;7). Melodic motion is all about chromatic closeness, but harmonic motion is flips it around and half steps are harmonically distant whereas thirds and fifths are closer. With this project I want to explore mapping this harmonic to colors, and what better way than by intercalating a chromatic spectrum around the circle of fifths.</p>
 
     <p>Unfortunately, the way that computers represent colors is not perceptually uniform, so it is difficult to find a balanced chromatic palette. So that is a work in progress.</p>
 
@@ -29,8 +42,13 @@
 
     <p>The next three sliders will rotate notes and colors around the wheel. They are momentary so they reset back to center when you release them.</p>
 
-    <details open>
-      <summary>Shepard tone calculator</summary>
+    <h3>Colors</h3>
+    <p>You can choose new colors by changing them on the color picker, courtesy of <a href="https://iro.js.org/">iro.js</a>.</p>
+
+    <p>Share the colors by copying the URL of this page, which will include the colors you chose!</p>
+
+    <details>
+      <summary><h2 style="display: inline-block; line-height: 0">Shepard tone calculator</h2></summary>
       <span id="shepard_min_octave_value" style="display: inline-block; width: 1em;">1</span>
       <input id="shepard_min_octave" type="range" min="0" max="8" step="1" value="1">
       <label for="shepard_min_octave">Minimum octave</label>
@@ -155,6 +173,7 @@
     </details>
   </details>
   <br>
+  <h1>Color Wheel</h1>
   <script type="text/javascript">
     // Wouldn't it be nice if the DOM API was nicer?
     var svgNS = "http://www.w3.org/2000/svg";
@@ -247,12 +266,48 @@
       return gen*(+i) % 12;
     }
 
+    function debounce(fn, interval=500) {
+      if (!debounce.debouncers) {
+        debounce.debouncers = [];
+      }
+      for (let d of debounce.debouncers) {
+        if (d[0] === fn) {
+          if (d[1] !== null) clearTimeout(d[1]);
+          d[1] = setTimeout(d[2], interval);
+          return d[1];
+        }
+      }
+      let i = debounce.debouncers.length;
+      let d = [
+        fn,
+        null,
+        (...arg) => {
+          var r = fn(...arg);
+          debounce.debouncers[i][1] = null;
+          return r;
+        }
+      ];
+      debounce.debouncers.push(d);
+      d[1] = setTimeout(d[2], interval);
+      return d[1];
+    }
+
     var palettes = {
       "gitlab":
         [
           "#e24328", "#fc6c25", "#fca326", "#fdc743", "#ffe560", "#bae223",
           "#22bc61", "#2d95bd", "#3871ab", "#3f4c9a", "#554488", "#9b2f48",
-        ]
+        ],
+      "mine0":
+        [
+          "#15bc1d", "#3397ad", "#3871ab", "#3f4c9a", "#554488", "#9b034f",
+          "#eb002a", "#fc3200", "#fc7a00", "#fda03d", "#ffc27d", "#b5e24b",
+        ],
+      "mine1":
+        [
+          "#15bc1d", "#3397ad", "#3871ab", "#433dbf", "#7d20a1", "#a60a6a",
+          "#eb002a", "#fc3200", "#fc7a00", "#fda03d", "#ffc27d", "#b5e24b",
+        ],
     };
 
     var notes = ["c","cis","d","dis","e","f","fis","g","gis","a","ais","b"];
@@ -274,11 +329,15 @@
           audios[noteidx] = audio;
         })(notes.findIndex(n => n === note)));
     }
-    function playnote(i, sust=false) {
+    function playnote(i, sust=false, auto=false) {
       if (i !== null) {
         audios[i % 12].currentTime = 0;
         audios[i % 12].play();
         audio_last_played = i % 12;
+        if (!auto) {
+          ui.play_scale.input.value = 0;
+          ui.play_scale.label.textContent = "Play scale";
+        }
       } else {
         i = audio_last_played;
       }
@@ -300,7 +359,7 @@
         return;
       }
       audio_last_played = norm(audio_last_played + audio_playing);
-      playnote(audio_last_played, audio_sustain);
+      playnote(audio_last_played, audio_sustain, true);
       audio_timer = setTimeout(playback, audio_speed);
     }
     var gens = [1,5,7,11];
@@ -309,7 +368,8 @@
     var genadj = [0,1,2,4,5,6,6,7,8,10,11,0];
 
     function WheelGroup() {
-      function Wheel() {
+      function Wheel(name) {
+        this.name = name;
         this.svg = document.body.createChild("svg");
         this.segments = [];
         this.gen_elements = [];
@@ -332,7 +392,7 @@
           set: (...args) => {
             var ret = Reflect.set(...args);
             if (Object.keys(args[0]).includes(args[1])) {
-              this.recolor(args[1]);
+              this.recolor(this.rot(args[1]));
             }
             return ret;
           }
@@ -377,7 +437,6 @@
         Wheel.instances.push(this);
         return this;
       };
-      WheelGroup.prototype = Wheel;
       Wheel.prototype.redraw = function() {
         this.svg.setAttribute("width", this.layout.size);
         this.svg.setAttribute("height", this.layout.size);
@@ -428,6 +487,9 @@
         if (i !== undefined) {
           this.segments[i].setAttribute("fill", this.colors[this.rot(i)]);
           this.gen_elements[i].setAttribute("fill", this.colors[this.rot(genidx[i])]);
+          if (this.name) {
+            document.body.style.setProperty("--"+this.name+"-note-"+notes[i], this.colors[this.rot(i)]);
+          }
         } else {
           for (var j=0; j<12; j++) {
             this.recolor(j);
@@ -463,6 +525,10 @@
           if (Object.keys(args[0]).includes(args[1])) {
             for (var j=0; j<Wheel.instances.length; j++) {
               Wheel.instances[j].colors[args[1]] = args[2];
+            }
+            if (colorPicker) {
+              colorPicker.colors[args[1]].hexString = args[2];
+              debounce(setHash);
             }
           }
           return ret;
@@ -511,8 +577,8 @@
       return Wheel;
     };
 
-    var main = new WheelGroup();
-    main.palette("gitlab");
+    var main = WheelGroup();
+    main.palette("mine0");
     main.cycle_colors(6);
 
     var nbsp = "\xa0";
@@ -677,6 +743,7 @@
     });
     ui.cycle.input.addEventListener("change", () => {
       ui.cycle.input.value = 0;
+      ui.cycle.last_value = 0;
     });
 
     ui.rotate = {};
@@ -718,47 +785,127 @@
       ui.rotate.input.value = 0;
     });
 
-    var wheel0 = new main();
-    var wheel1 = new main();
+    var color_body = document.body.createChild("div", {
+      class: "colorPicker"
+    });
+    /*
+    ui.colors = notes.map((note,i) => {
+      var color = {};
+      color.input = color_body.createChild("input", {
+        type: "color",
+        value: main.colors[i],
+      });
+      color.input.addEventListener("input", () => {
+        main.colors[i] = color.input.value;
+      });
+      return color;
+    });
+    */
+    var colorPicker = new iro.ColorPicker(".colorPicker", {
+      // color picker options
+      // Option guide: https://iro.js.org/guide.html#color-picker-options
+      width: 260,
+      // Pure red, green and blue
+      colors: main.colors.slice(),
+      handleRadius: 9,
+      borderWidth: 1,
+      borderColor: "#fff",
+    });
+
+    function setColor(colorIndex) {
+      // setActiveColor expects the color index!
+      colorPicker.setActiveColor(colorIndex);
+    }
+
+    // https://iro.js.org/guide.html#color-picker-events
+    colorPicker.on(["mount", "color:change"], function(){
+      colorPicker.colors.forEach(color => {
+        const index = color.index;
+        const hexString = color.hexString;
+        main.colors[index] = hexString;
+      });
+    });
+
+    colorPicker.on(["mount", "color:setActive", "color:change"], function(){
+      // colorPicker.color is always the active color
+      const index = colorPicker.color.index;
+      const hexString = colorPicker.color.hexString;
+    })
+
+    var wheel0 = new main("wheel0");
+    var wheel1 = new main("wheel1");
     wheel0.gen.value = 7;
     wheel1.layout.notes = false;
 
-    var table = document.body.createChild("table");
-    Object.assign(table.style, {
-      borderSpacing: "0px",
-      borderCollapse: "separate",
-    });
-    var chord = [0,4,7];
-    for (var i=0; i<12; i++) {
-      var tr = table.createChild("tr");
-      Object.assign(tr.style, {
-        backgroundColor: main.colors[wheel0.rot(i)],
-        borderColor: main.colors[wheel0.rot(i)],
-        border: "1px solid " + main.colors[wheel0.rot(i)],
-        cursor: "pointer",
-      });
-      tr.addEventListener("click", (i => () => {
-        audio_playing = 0;
-        var sus = audio_sustain;
-        for (let [k,j] of chord.entries()) {
-          setTimeout(playnote.bind(this, norm(i+j), sus), 60*k);
-          sus = true;
+    function parseHash() {
+      var search = window.location.hash;
+      if (search && search[0] === "#") {
+        search = search.substring(1);
+      }
+      for (let [k,v] of new URLSearchParams(search).entries()) {
+        if (v[0] !== "#") {
+          v = "#" + v;
         }
-      })(i));
-      for (let [k,j] of chord.entries()) {
-        var td = tr.createChild("td");
-        td.textContent = notes[norm(i+j)].replace("is", "\u266F");
-        Object.assign(td.style, {
-          textAlign: "center",
-          verticalAlign: "middle",
-          color: "white",
-          border: "6px solid " + main.colors[wheel0.rot(i)],
-          backgroundColor: main.colors[wheel0.rot(i+j)],
-          width: "40px",
-          height: "40px",
+        if (v.length !== 7) {
+          continue;
+        }
+        var i = +k;
+        if (!isNaN(i) && Number.isInteger(i) && 0 <= i && i < main.colors.length) {
+          main.colors[i] = v;
+        }
+      }
+    }
+    function setHash() {
+      var s = new URLSearchParams();
+      for (let i in notes) {
+        s.set(i, main.colors[i].substring(1));
+      }
+      window.location.replace("#"+s.toString());
+    }
+    parseHash();
+
+    var tables = document.body.createChild("tables");
+    Object.assign(tables.style, {
+      display: "flex",
+    });
+    var chords = [[0,4,7], [0,3,7], [0,3,6]];
+    for (let chord of chords) {
+      var table = tables.createChild("table");
+      Object.assign(table.style, {
+        borderSpacing: "0px",
+        borderCollapse: "separate",
+        margin: "0 1em",
+      });
+      for (var i=0; i<12; i++) {
+        var tr = table.createChild("tr");
+        Object.assign(tr.style, {
+          backgroundColor: "var(--wheel0-note-" + notes[norm(i)] + ")",
+          border: "1px solid " + "var(--wheel0-note-" + notes[norm(i)] + ")",
+          cursor: "pointer",
         });
-        if (k > 0) {
-          td.style.borderLeftWidth = 0;
+        tr.addEventListener("click", (i => () => {
+          audio_playing = 0;
+          var sus = audio_sustain;
+          for (let [k,j] of chord.entries()) {
+            setTimeout(playnote.bind(this, norm(i+j), sus), 60*k);
+            sus = true;
+          }
+        })(i));
+        for (let [k,j] of chord.entries()) {
+          var td = tr.createChild("td");
+          td.textContent = notes[norm(i+j)].replace("is", "\u266F");
+          Object.assign(td.style, {
+            textAlign: "center",
+            verticalAlign: "middle",
+            color: "white",
+            border: "6px solid " + "var(--wheel0-note-" + notes[norm(i)] + ")",
+            backgroundColor: "var(--wheel0-note-" + notes[norm(i+j)] + ")",
+            width: "40px",
+            height: "40px",
+          });
+          if (k > 0) {
+            td.style.borderLeftWidth = 0;
+          }
         }
       }
     }
